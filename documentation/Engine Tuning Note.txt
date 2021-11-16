@@ -1,0 +1,14 @@
+Limp Mode
+Engine Starting
+Engine Warmup
+
+Deceleration Fuel Cutoff
+https://thumpertalk.com/forums/topic/1300313-ecu-tuning-explained/
+https://www.svrider.com/threads/how-does-adjustable-engine-braking-work.160911/
+https://www.cycleworld.com/why-engine-braking-control-for-motorcycles-and-why-now/  single cylinder combustion
+http://www.formula1-dictionary.net/engine_braking.html
+
+Overrun Fuel Cutoff
+THIS MANUAL IS AMAZING
+https://motorsport-electronics.co.uk/onlinehelp/html/8211.html
+
