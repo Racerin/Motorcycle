@@ -6,9 +6,9 @@
 
 
 // Configuring Pins
-int ignition_pin = 8;
-int ignite_btn = 7;
-int dwell_pin = A0;
+const int ignition_pin = 8;
+const int ignite_btn = 7;
+const int dwell_pin = A0;
 
 
 // Global variables
@@ -18,8 +18,8 @@ int dwell_pin_score;
 int dwell_pin_value;
 // dwell time for charging primary coil in milliseconds
 int dwell;
-int dwell_min=1;
-int dwell_max=10;
+const int min_dwell_time = 1;
+const int max_dwell_time = 10;
 
 // Ignite
 bool ignite_btn_down = false;
@@ -39,7 +39,7 @@ void loop(){
     int dwell_pin_value = analogRead(dwell_pin);
     if (dwell_pin_value != dwell_pin_score){
         // Set new dwell value
-        dwell = map(dwell_pin_value, 0, 1023, dwell_min, dwell_max);
+        dwell = map(dwell_pin_value, 0, 1023, min_dwell_time, max_dwell_time);
         // Update score
         dwell_pin_score = dwell_pin_value;
     };
