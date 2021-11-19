@@ -1,4 +1,4 @@
-/* Code for arduino to regulate output voltage by using Pulse Width Modulation with hardware. */
+/* Code for arduino to regulate output voltage. */
 
 #include <Arduino.h>
 
@@ -10,6 +10,7 @@ const int output_analog_pin = 5;
 int output_option = 0;
 int analog_input;
 int analog_write_counter = 0;
+int temp_analog_write_counter = analog_write_counter;
 
 
 // Electronics values
@@ -39,26 +40,37 @@ void adjust_output_pin(){
     switch(output_option){
         case 0:
             // Turn ON/OFF the output pin based on input_voltage to threshold
-            if(input_voltage > voltage_threshold){digitalWrite(output_analog_pin, LOW);}
-            else{digitalWrite(output_analog_pin, HIGH);}
+            if(input_voltage > voltage_threshold){
+                digitalWrite(output_analog_pin, LOW);
+                }
+            else{
+                digitalWrite(output_analog_pin, HIGH);
+                }
             break;
 
         default:
-            // Use builtin analogWrite
+            // Use builtin analogWrite. Increment analog write value up and down accordingly.
             if(input_voltage > voltage_threshold){
-                analog_write_counter -= 1;
+                temp_analog_write_counter -= 1;
             }
             else{
-                analog_write_counter += 1;
+                temp_analog_write_counter += 1;
             }
-            analogWrite(output_analog_pin, analog_write_counter);
+            // Ensure analog_write_counter within input range
+            temp_analog_write_counter = constrain(temp_analog_write_counter, 0, 255);
+            if (temp_analog_write_counter != analog_write_counter){
+                // Update analog_write_counter
+                temp_analog_write_counter = analog_write_counter;
+                // Set new analog/PWM write value
+                analogWrite(output_analog_pin, analog_write_counter);
+            };
             break;
     }
 };
 
 void setup(){
     // Configure pins
-    pinMode(output_analog_pin, OUTPUT);
+    // pinMode(output_analog_pin, OUTPUT);
 };
 
 void loop(){
