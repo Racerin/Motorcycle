@@ -10,6 +10,7 @@ class PinInValues{
         int __inputs [10];
         int __count = 0;
         int __total = 0;
+        int __max = 0;
 
     public:
         PinInValues(int size){
@@ -30,6 +31,18 @@ class PinInValues{
             return __total / sz;
         };
 
+        int maximum(){
+            int sz = size();
+            int check;
+            for(int i; i < sz; i++){
+                check = __inputs[i];
+                if(__max < check){
+                    __max = check;
+                }
+            }
+            return __max;
+        };
+
         void add(int ipt){
             __inputs[__count] = ipt;
             __count++;
@@ -43,7 +56,7 @@ class PinInValues{
 // Configure Pins
 const int voltage_sensor_pin = A1;
 const int output_pin = 5;
-int output_option = 0;
+int output_option = 3;
 
 // Electronics values
 // V,input / V,pin = R,input / R,pin
@@ -61,6 +74,7 @@ int analog_write_counter = 0;
 
 PinInValues piv(20);
 int average;
+int maximum;
 
 
 int setup_voltage_bit_threshold(){
@@ -96,6 +110,16 @@ void update_output_pin(){
             piv.add(input_analog_value);
             average = piv.average();
             if(average > input_threshold_value){
+                digitalWrite(output_pin, LOW);
+            }
+            else{
+                digitalWrite(output_pin, HIGH);
+            }
+            break;
+        case 3:
+            piv.add(input_analog_value);
+            maximum = piv.maximum();
+            if(maximum > input_threshold_value){
                 digitalWrite(output_pin, LOW);
             }
             else{
