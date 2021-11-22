@@ -5,6 +5,8 @@ Get threshold as a 10bit vlue from the start and compare analogRead to 10bit thr
 
 #include <Arduino.h>
 
+int output_option = 20;
+
 class PinInValues{
     private:
         int __inputs [10];
@@ -13,6 +15,9 @@ class PinInValues{
         int __max = 0;
 
     public:
+        int avg;
+        int maxm;
+
         PinInValues(int size){
             int __inputs[size] = {0};
         }
@@ -21,7 +26,7 @@ class PinInValues{
             return sizeof(__inputs)/sizeof(*__inputs);
         }
 
-        int average(){
+        int get_average(){
             // Return average of input size
             int sz = size();
             __total = 0;
@@ -31,7 +36,7 @@ class PinInValues{
             return __total / sz;
         };
 
-        int maximum(){
+        int get_maximum(){
             int sz = size();
             int check;
             for(int i; i < sz; i++){
@@ -55,8 +60,8 @@ class PinInValues{
 
 // Configure Pins
 const int voltage_sensor_pin = A1;
+const int potentiometer_pin = A5;
 const int output_pin = 5;
-int output_option = 3;
 
 // Electronics values
 // V,input / V,pin = R,input / R,pin
@@ -65,24 +70,29 @@ const long r_besides_pin = 1e5;
 const long r_total = r_pin + r_besides_pin;
 const float r_ratio = r_total/r_pin;    //      R,input / R,pin
 
+// Thresholds and limits
 const float voltage_threshold = 14.1;
 int input_threshold_value;
+int input_upper_limit;
+int input_lower_limit;
 
+// Input read values
 int input_analog_value;
+int input_potentiometer_value;
 int analog_write_counter = 0;
 
+// Manual Adjust values
+int pot_mapped;
 
 PinInValues piv(20);
-int average;
-int maximum;
 
 
-int setup_voltage_bit_threshold(){
+int setup_voltage_bit_threshold(float voltage_limit){
     // Working constant
     float constant = 1;
 
     // Convert threshold voltage to pin voltage
-    constant *= voltage_threshold/r_ratio;
+    constant *= voltage_limit/r_ratio;
 
     // Convert pin voltage to 10bits
     // constant = map(constant, 0, 5, 0, 1023);
@@ -98,6 +108,7 @@ void update_output_pin(){
     input_analog_value = analogRead(voltage_sensor_pin);
     switch(output_option){
         case 1:
+            // Joggle based on input value being below or above threshold
             if (input_analog_value > input_threshold_value){
                 analog_write_counter--;
             }
@@ -107,9 +118,10 @@ void update_output_pin(){
             analogWrite(output_pin, analog_write_counter);
             break;
         case 2:
+            // Buffer based on average input value crossing threshold
             piv.add(input_analog_value);
-            average = piv.average();
-            if(average > input_threshold_value){
+            piv.avg = piv.get_average();
+            if(piv.avg > input_threshold_value){
                 digitalWrite(output_pin, LOW);
             }
             else{
@@ -117,16 +129,39 @@ void update_output_pin(){
             }
             break;
         case 3:
+            // Buffer based on maximum input value crossing threshold
             piv.add(input_analog_value);
-            maximum = piv.maximum();
-            if(maximum > input_threshold_value){
+            piv.maxm = piv.get_maximum();
+            if(piv.maxm > input_threshold_value){
                 digitalWrite(output_pin, LOW);
             }
             else{
                 digitalWrite(output_pin, HIGH);
             }
             break;
+        case 10:
+            // Stay between lower and upper limits
+            if (input_analog_value < input_lower_limit)
+            {
+                analog_write_counter++;
+            }
+            else
+            {
+                if(input_analog_value > input_upper_limit)
+                {
+                    analog_write_counter--;
+                };
+            };
+            analogWrite(output_pin, analog_write_counter);
+            break;
+        case 20:
+            // Manually adjust output pin's pwm according to value on potentiometer
+            input_potentiometer_value = analogRead(potentiometer_pin);
+            pot_mapped = map(input_potentiometer_value, 0, 1023, 0, 255);
+            analogWrite(output_pin, input_potentiometer_value);
+            break;
         default:
+            // Adjusts input_analog_value according to above or below threshold
             if(input_analog_value > input_threshold_value){
                 digitalWrite(output_pin, LOW);
             }
@@ -137,16 +172,46 @@ void update_output_pin(){
     }
 };
 
+void adjust_timer(){
+    // Adjust (increase) the timer frequency for pin 5 (and 6)
+    // TCCR0B;  // Timer
+    // CS00;   // Prescalar
+    TCCR0B = TCCR0B & B11111000 | B00000001;    // PWM frequency of 31372.55 Hz: https://www.electronicwings.com/users/sanketmallawat91/projects/215/frequency-changing-of-pwm-pins-of-arduino-uno#:~:text=PWM%20is%20used%20by%20using,a%20simple%20line%20of%20code.
+    // By changing Timer0, functions; millis, delay: are affect
+    // For more info: https://www.arduino.cc/en/Tutorial/SecretsOfArduinoPWM
+};
+
 void setup(){
+    // Setup serial connection
     Serial.begin(9600);
+
+    // Setup pins
     pinMode(output_pin, OUTPUT);
-    input_threshold_value = setup_voltage_bit_threshold();
+    input_threshold_value = setup_voltage_bit_threshold(voltage_threshold);
+
+    // Setup timer
+    adjust_timer();
+
+    // case 10 threshold
+    input_lower_limit = setup_voltage_bit_threshold(12.8);
+    input_upper_limit = setup_voltage_bit_threshold(14.4);
 };
 
 
 void loop(){
     update_output_pin();
-    Serial.print(input_analog_value);
-    Serial.print(",");
-    Serial.println(input_threshold_value);
+    if(output_option < 10){
+        Serial.print(input_analog_value);
+        Serial.print(",");
+        Serial.print(input_threshold_value);
+        Serial.print("\n");
+    }
+    else{
+        Serial.print(input_analog_value);
+        Serial.print(",");
+        Serial.print(input_lower_limit);
+        Serial.print(",");
+        Serial.print(input_upper_limit);
+        Serial.print("\n");
+    }
 };
