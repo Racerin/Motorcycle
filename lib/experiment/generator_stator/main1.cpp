@@ -5,7 +5,7 @@ Get threshold as a 10bit vlue from the start and compare analogRead to 10bit thr
 
 #include <Arduino.h>
 
-int output_option = 20;
+int output_option = 10;
 
 class PinInValues{
     private:
@@ -61,7 +61,8 @@ class PinInValues{
 // Configure Pins
 const int voltage_sensor_pin = A1;
 const int potentiometer_pin = A5;
-const int output_pin = 5;
+const int output_pin = 3;
+char print_option;
 
 // Electronics values
 // V,input / V,pin = R,input / R,pin
@@ -144,20 +145,27 @@ void update_output_pin(){
             if (input_analog_value < input_lower_limit)
             {
                 analog_write_counter++;
+                Serial.println("Too low");
             }
             else
             {
                 if(input_analog_value > input_upper_limit)
                 {
                     analog_write_counter--;
-                };
+                    Serial.println("Too high");
+                }
+                else{
+                    Serial.println("Too just right.");
+                }
             };
             analogWrite(output_pin, analog_write_counter);
             break;
         case 20:
             // Manually adjust output pin's pwm according to value on potentiometer
             input_potentiometer_value = analogRead(potentiometer_pin);
-            pot_mapped = map(input_potentiometer_value, 0, 1023, 0, 255);
+            // pot_mapped = map(input_potentiometer_value, 0, 1023, 0, 255);
+            pot_mapped = input_potentiometer_value * 255 / 1023;
+            // pot_mapped = input_potentiometer_value * 1023 / 255;
             analogWrite(output_pin, input_potentiometer_value);
             break;
         default:
@@ -190,28 +198,36 @@ void setup(){
     input_threshold_value = setup_voltage_bit_threshold(voltage_threshold);
 
     // Setup timer
-    adjust_timer();
+    // adjust_timer();
 
     // case 10 threshold
     input_lower_limit = setup_voltage_bit_threshold(12.8);
     input_upper_limit = setup_voltage_bit_threshold(14.4);
+
+    // Setup print option
+    if (output_option < 10){print_option='a';}
+    if (output_option == 20){print_option='b';}
 };
 
 
 void loop(){
     update_output_pin();
-    if(output_option < 10){
-        Serial.print(input_analog_value);
-        Serial.print(",");
-        Serial.print(input_threshold_value);
-        Serial.print("\n");
-    }
-    else{
-        Serial.print(input_analog_value);
-        Serial.print(",");
-        Serial.print(input_lower_limit);
-        Serial.print(",");
-        Serial.print(input_upper_limit);
-        Serial.print("\n");
+    // Print output
+    switch(print_option)
+    {
+        case 'a':
+            Serial.print(input_analog_value);
+            Serial.print(",");
+            Serial.print(input_threshold_value);
+            Serial.print("\n");
+            break;
+        case 'c':
+            Serial.print(input_analog_value);
+            Serial.print(",");
+            Serial.print(input_lower_limit);
+            Serial.print(",");
+            Serial.print(input_upper_limit);
+            Serial.print("\n");
+            break;
     }
 };
