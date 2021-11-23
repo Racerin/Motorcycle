@@ -116,6 +116,7 @@ void update_output_pin(){
             else{
                 analog_write_counter++;
             }
+            analog_write_counter = constrain(analog_write_counter, 0, 255);
             analogWrite(output_pin, analog_write_counter);
             break;
         case 2:
@@ -158,6 +159,7 @@ void update_output_pin(){
                     Serial.println("Too just right.");
                 }
             };
+            analog_write_counter = constrain(analog_write_counter, 0, 255);
             analogWrite(output_pin, analog_write_counter);
             break;
         case 20:
