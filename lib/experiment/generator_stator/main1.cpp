@@ -59,23 +59,26 @@ class PinInValues{
 };
 
 // Configure Pins
-const int voltage_sensor_pin = A1;
-const int potentiometer_pin = A5;
-const int output_pin = 3;
+const int VOLTAGE_SENSOR_PIN = A1;
+const int POTENTIOMETER_PIN = A5;
+const int OUTPUT_PIN = 3;
 char print_option;
 
 // Electronics values
 // V,input / V,pin = R,input / R,pin
-const long r_pin = 1e4;
-const long r_besides_pin = 1e5;
-const long r_total = r_pin + r_besides_pin;
-const float r_ratio = r_total/r_pin;    //      R,input / R,pin
+const long R_PIN = 1e4;
+const long R_BESIDES_PIN = 1e5;
+const long R_TOTAL = R_PIN + R_BESIDES_PIN;
+const float R_RATIO = R_TOTAL/R_PIN;    //      R,input / R,pin
 
 // Thresholds and limits
-const float voltage_threshold = 14.1;
+const float VOLTAGE_THRESHOLD = 14.1;
 int input_threshold_value;
 int input_upper_limit;
 int input_lower_limit;
+
+const float VOLTAGE_UPPER_THRESHOLD = 14.1;
+const float VOLTAGE_LOWER_THRESHOLD = 12.8;
 
 // Input read values
 int input_analog_value;
@@ -93,7 +96,7 @@ int setup_voltage_bit_threshold(float voltage_limit){
     float constant = 1;
 
     // Convert threshold voltage to pin voltage
-    constant *= voltage_limit/r_ratio;
+    constant *= voltage_limit/R_RATIO;
 
     // Convert pin voltage to 10bits
     // constant = map(constant, 0, 5, 0, 1023);
@@ -106,7 +109,7 @@ int setup_voltage_bit_threshold(float voltage_limit){
 
 void update_output_pin(){
     // Get analogRead value
-    input_analog_value = analogRead(voltage_sensor_pin);
+    input_analog_value = analogRead(VOLTAGE_SENSOR_PIN);
     switch(output_option){
         case 1:
             // Joggle based on input value being below or above threshold
@@ -117,17 +120,17 @@ void update_output_pin(){
                 analog_write_counter++;
             }
             analog_write_counter = constrain(analog_write_counter, 0, 255);
-            analogWrite(output_pin, analog_write_counter);
+            analogWrite(OUTPUT_PIN, analog_write_counter);
             break;
         case 2:
             // Buffer based on average input value crossing threshold
             piv.add(input_analog_value);
             piv.avg = piv.get_average();
             if(piv.avg > input_threshold_value){
-                digitalWrite(output_pin, LOW);
+                digitalWrite(OUTPUT_PIN, LOW);
             }
             else{
-                digitalWrite(output_pin, HIGH);
+                digitalWrite(OUTPUT_PIN, HIGH);
             }
             break;
         case 3:
@@ -135,10 +138,10 @@ void update_output_pin(){
             piv.add(input_analog_value);
             piv.maxm = piv.get_maximum();
             if(piv.maxm > input_threshold_value){
-                digitalWrite(output_pin, LOW);
+                digitalWrite(OUTPUT_PIN, LOW);
             }
             else{
-                digitalWrite(output_pin, HIGH);
+                digitalWrite(OUTPUT_PIN, HIGH);
             }
             break;
         case 10:
@@ -160,23 +163,45 @@ void update_output_pin(){
                 }
             };
             analog_write_counter = constrain(analog_write_counter, 0, 255);
-            analogWrite(output_pin, analog_write_counter);
+            analogWrite(OUTPUT_PIN, analog_write_counter);
+            break;
+        case 11:
+            // Similiar to case 10 but actuation reverse because IGBT is now pull-up resistor
+            // Stay between lower and upper limits
+            if (input_analog_value < input_lower_limit)
+            {
+                analog_write_counter--;
+                Serial.println("Too low");
+            }
+            else
+            {
+                if(input_analog_value > input_upper_limit)
+                {
+                    analog_write_counter++;
+                    Serial.println("Too high");
+                }
+                else{
+                    Serial.println("Too just right.");
+                }
+            };
+            analog_write_counter = constrain(analog_write_counter, 0, 255);
+            analogWrite(OUTPUT_PIN, analog_write_counter);
             break;
         case 20:
             // Manually adjust output pin's pwm according to value on potentiometer
-            input_potentiometer_value = analogRead(potentiometer_pin);
+            input_potentiometer_value = analogRead(POTENTIOMETER_PIN);
             // pot_mapped = map(input_potentiometer_value, 0, 1023, 0, 255);
             pot_mapped = input_potentiometer_value * 255 / 1023;
             // pot_mapped = input_potentiometer_value * 1023 / 255;
-            analogWrite(output_pin, input_potentiometer_value);
+            analogWrite(OUTPUT_PIN, input_potentiometer_value);
             break;
         default:
             // Adjusts input_analog_value according to above or below threshold
             if(input_analog_value > input_threshold_value){
-                digitalWrite(output_pin, LOW);
+                digitalWrite(OUTPUT_PIN, LOW);
             }
             else {
-                digitalWrite(output_pin, HIGH);
+                digitalWrite(OUTPUT_PIN, HIGH);
             }
             break;
     }
@@ -196,15 +221,15 @@ void setup(){
     Serial.begin(9600);
 
     // Setup pins
-    pinMode(output_pin, OUTPUT);
-    input_threshold_value = setup_voltage_bit_threshold(voltage_threshold);
+    pinMode(OUTPUT_PIN, OUTPUT);
+    input_threshold_value = setup_voltage_bit_threshold(VOLTAGE_THRESHOLD);
 
     // Setup timer
     // adjust_timer();
 
     // case 10 threshold
     input_lower_limit = setup_voltage_bit_threshold(12.8);
-    input_upper_limit = setup_voltage_bit_threshold(14.4);
+    input_upper_limit = setup_voltage_bit_threshold(14.1);
 
     // Setup print option
     if (output_option < 10){print_option='a';}
