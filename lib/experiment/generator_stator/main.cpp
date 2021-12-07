@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 // Configure Pins
-const int voltage_sensor_pin = A1;
+const int VOLTAGE_SENSOR_PIN = A1;
 const int output_analog_pin = 5;
 
 // IO
@@ -15,32 +15,32 @@ int temp_analog_write_counter = analog_write_counter;
 
 // Electronics values
 // V,input / V,pin = R,input / R,pin
-const int r_pin = 10000;
-const int r_besides_pin = 20000;
-const int r_total = r_pin + r_besides_pin;
-const float r_ratio = r_total/r_pin;    //      R,input / R,pin
+const int R_PIN = 10000;
+const int R_BESIDES_PIN = 20000;
+const int R_TOTAL = R_PIN + R_BESIDES_PIN;
+const float R_RATIO = R_TOTAL/R_PIN;    //      R,input / R,pin
 
-const float voltage_threshold = 14.1;
+const float VOLTAGE_THRESHOLD = 14.1;
 
 float pin_voltage;
 float input_voltage;
 
 int get_input_voltage(){
     // Read input pin
-    analog_input = analogRead(voltage_sensor_pin);
+    analog_input = analogRead(VOLTAGE_SENSOR_PIN);
     
     // Convert to input voltage
     pin_voltage = map(analog_input, 0, 1023, 0, 5);
 
     // Extrapolate to read input voltage, (Vin = R,ratio * V,pin)
-    return pin_voltage * r_ratio;
+    return pin_voltage * R_RATIO;
 };
 
 void adjust_output_pin(){
     switch(output_option){
         case 0:
             // Turn ON/OFF the output pin based on input_voltage to threshold
-            if(input_voltage > voltage_threshold){
+            if(input_voltage > VOLTAGE_THRESHOLD){
                 digitalWrite(output_analog_pin, LOW);
                 }
             else{
@@ -50,7 +50,7 @@ void adjust_output_pin(){
 
         default:
             // Use builtin analogWrite. Increment analog write value up and down accordingly.
-            if(input_voltage > voltage_threshold){
+            if(input_voltage > VOLTAGE_THRESHOLD){
                 temp_analog_write_counter -= 1;
             }
             else{
