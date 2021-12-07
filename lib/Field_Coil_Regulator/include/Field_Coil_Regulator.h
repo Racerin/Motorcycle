@@ -4,72 +4,60 @@
   Released into the public domain.
 */
 
-
 #ifndef Field_Coil_Regulator_h
 #define Field_Coil_Regulator_h
 
-
 #include "Arduino.h"
-
 
 class Field_Coil_Regulator
 {
-    public:
-        Field_Coil_Regulator(int inputAnalogPin, int outputPWMPin);
-        void setup();
-        void update();
-    private:
-        // Pins
-        int VOLTAGE_SENSOR_PIN;
-        int OUTPUT_PIN;
+public:
+    Field_Coil_Regulator(int upperInputAnalogPin, int lowerInputAnalogPin, int outputPWMPin);
+    void setup();
+    void update();
 
-        // Electronic Hardware
-        const long R_PIN = 1e4;
-        const long R_BESIDES_PIN = 1e5;
-        long R_TOTAL;
-        float R_RATIO;
+    // Voltage Thresholds and Limits
+    const float MAX_VOLTAGE = 40;
+    const float MIN_VOLTAGE = 0;
+    float voltage_upper_limit = 12.8;
+    float voltage_lower_limit = 14.1;
 
-        // Voltage Thresholds and Limits
-        const float VOLTAGE_THRESHOLD = 14.1;
-        const float voltage_upper_limit = 12.8;
-        const float voltage_lower_limit = 14.1;
+private:
+    // Pins
+    int __VOLTAGE_SENSOR_PIN_UPPER;
+    int __VOLTAGE_SENSOR_PIN_LOWER;
+    int __OUTPUT_PIN;
 
-        int input_threshold_value;
-        int input_upper_limit;
-        int input_lower_limit;
+    // Electronic Hardware
+    const long MAX_RESISTANCE = 1e7;
+    const long MIN_RESISTANCE = 10;
+
+    long __r_between_pins = 1e4;
+    long __r_besides_pin = 1e5;
+    long __r_total;
+    float __r_ratio;
+
+    int __input_threshold_value;
+    int __input_upper_limit;
+    int __input_lower_limit;
+
+    int __input_analog_value_lower;
+    int __input_analog_value_upper;
+    int __input_analog_value_diff;
+
+    int __analog_write_counter = 0;
 
 
-        // METHODS
-        
-        int __voltage_to_10bits(float voltage_limit){
-            // Working constant
-            float constant = 1;
+    // METHODS
+    int __voltage_to_10bits(float voltage_limit);
 
-            // Convert threshold voltage to pin voltage
-            constant *= voltage_limit/R_RATIO;
+    void set_input_upper_limit(float upperLimit);
+    void set_input_lower_limit(float lowerLimit);
 
-            // Convert pin voltage to 10bits
-            // constant = map(constant, 0, 5, 0, 1023);
-            constant /= 5;
-            constant *= 1023;
+    void set_resistances(long sensingResistor, long otherResistor);
 
-            // Return int value for analog read threshold
-            return int(constant);
-        };
-
-        void calc_resistances(){
-            // Sets final resistance values.
-            R_TOTAL = R_PIN + R_BESIDES_PIN;
-            R_RATIO = R_TOTAL/R_PIN;
-        }
-
-        void calc_input_limits(){
-            // Calculate and set limits for each input_read threshold/limit
-            input_threshold_value = __voltage_to_10bits(VOLTAGE_THRESHOLD);
-            input_lower_limit = __voltage_to_10bits(voltage_lower_limit);
-            input_upper_limit = __voltage_to_10bits(voltage_upper_limit);
-        }
+    void __calc_resistances();
+    void __calc_input_limits();
 };
-
 
 #endif
