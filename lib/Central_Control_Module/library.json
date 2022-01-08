@@ -1,0 +1,26 @@
+{
+    "name": "Central_Control_Module",
+    "version": "0.1",
+    "description": "A program to control the main functions/modules of a motorcycle using an Arduino microcontroller.",
+    "keywords": "yamaha, xj, seca, 750, CCM, ECU, ECM",
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/Racerin/"
+    },
+    "authors":
+    [
+      {
+        "name": "Darnell Baird",
+        "email": "drsbaird@yahoo.com",
+        "url": "https://www.example.com"
+      }
+    ],
+    "license": "MIT",
+    "homepage": "https://www.example.org/",
+    "dependencies": {
+      "ownername/print": "~1.3.0"
+    },
+    "frameworks": "*",
+    "platforms": "*"
+  }
