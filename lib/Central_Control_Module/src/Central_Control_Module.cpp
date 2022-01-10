@@ -97,9 +97,9 @@ public:
         // Set pins modes
         pinMode(input_pin, INPUT);
         pinMode(output_pin, OUTPUT);
-    };
+    }
 
-    Rider_Control_Factory(){};
+    Rider_Control_Factory() {}
 
     void activate_func()
     {
@@ -109,9 +109,9 @@ public:
     {
         digitalWrite(output_pin, state_OFF);
     }
-    void blink_activate_func()
+    void blink_activate_func(int curr_millis)
     {
-        time_held_down = millis() - time_last_pressed;
+        time_held_down = curr_millis - time_last_pressed;
         time_blink_state = (time_held_down / (time_blink_cycle / 2)) % 2;
         if (time_blink_state)
         {
@@ -122,8 +122,12 @@ public:
             deactivate_func();
         };
     }
+    void blink_activate_func()
+    {
+        blink_activate_func(millis());
+    }
 
-    void update()
+    void update(int current_milliseconds)
     /* 
         Assign methods to class based on flag_type.
         t : toggle (default)
@@ -138,7 +142,7 @@ public:
             // turn ON/OFF according to time cycle period
             if (state != state_OFF)
             {
-                blink_activate_func();
+                blink_activate_func(current_milliseconds);
             }
             else
             {
@@ -213,8 +217,9 @@ void Central_Control_Module::update()
 {
     /* Run update within 'update' of Arduino. */
     // Run update for each rider control
+    current_millis = millis();
     for (int i = 0; i < __n_pins; i++)
     {
-        rider_controls[i].update();
+        rider_controls[i].update(current_millis);
     };
 };

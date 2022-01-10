@@ -35,6 +35,7 @@ class Central_Control_Module
             };
     private:
         int __n_pins;
+        int current_millis;
 
         Rider_Control_Factory rider_controls[];
 
