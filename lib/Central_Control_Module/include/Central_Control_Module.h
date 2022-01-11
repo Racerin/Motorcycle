@@ -8,22 +8,15 @@
 #define Central_Control_Module_h
 
 #include "Arduino.h"
+// #include <ArduinoSTL.h>
+#include <map>
 
 class Central_Control_Module
 {
     public:
-        Central_Control_Module(
-            int input_pins[],
-            int output_pins[],
-            int default_values[],
-            char rider_control_types[],
-            int n_pins
-            );
-        void setup();
-        void update();
-        int turn_on_indicator_left();
-        int turn_on_indicator_right();
+        // enum
         enum class electric_load{
+            none=0,
             left_indicator, 
             right_indicator, 
             headlight, 
@@ -33,11 +26,38 @@ class Central_Control_Module
             brake,
             starter
             };
+
+        // Instantiation
+        Central_Control_Module(
+            // int ids[],
+            electric_load ids[],
+            int input_pins[],
+            int output_pins[],
+            int default_values[],
+            char rider_control_types[],
+            int n_pins
+            );
+        
+        // Methods
+        void setup();
+        void update();
+        void turn_OFF(electric_load load_id);
+        void turn_ON(electric_load load_id);
+        void toggle(electric_load load_id);
+
     private:
+        // Attributes
         int __n_pins;
         int current_millis;
+        int* __ids; // Will be populated later
+        std::map<electric_load, Rider_Control_Factory> rider_dict;
+        // std::vector<int> __ids;
 
         Rider_Control_Factory rider_controls[];
+
+        // Methods
+        Rider_Control_Factory get_rider_control_OLD(electric_load id);
+        Rider_Control_Factory get_rider_control(electric_load id);
 
 };
 

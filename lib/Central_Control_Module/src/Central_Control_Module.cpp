@@ -8,6 +8,7 @@
 // #include <Bounce2.h>
 // #include "InputDebounce.h"
 #include "Central_Control_Module.h"
+#include <ArduinoSTL.h>
 
 class Button
 {
@@ -84,8 +85,8 @@ public:
     int output_pin;
     char type_flag;
 
-    int state;
     int state_OFF;
+    int state;
 
     int time_blink_cycle = 1000;
     int time_blink_state;
@@ -131,7 +132,6 @@ public:
     /* 
         Assign methods to class based on flag_type.
         t : toggle (default)
-        m : momentary[ switch]
         b : blink/indicator (toggle with cycling ON and OFF)
     */
     {
@@ -149,7 +149,7 @@ public:
                 deactivate_func();
             };
         default:
-            // Do nothing
+            // Simple toggle ON/OFF
             if (state != state_OFF)
             {
                 activate_func();
@@ -184,6 +184,7 @@ public:
 };
 
 Central_Control_Module::Central_Control_Module(
+    electric_load ids[],
     int input_pins[],
     int output_pins[],
     int default_values[],
@@ -194,18 +195,22 @@ Central_Control_Module::Central_Control_Module(
     Rider_Control_Factory rider_controls[n_pins];
 
     // Create Rider_Control object and keep it within
-    for (int n = 0; n < n_pins; n++)
+    for (int i = 0; i < n_pins; i++)
     {
         Rider_Control_Factory rider_control = Rider_Control_Factory(
-            input_pins[n],
-            output_pins[n],
-            default_values[n],
-            rider_control_type[n]);
-        rider_controls[n] = rider_control;
+            input_pins[i],
+            output_pins[i],
+            default_values[i],
+            rider_control_type[i]);
+        rider_controls[i] = rider_control;
+
+        // Update map
+        rider_dict[ids[i]] = rider_control;
     }
 
     // Assign attributes
     __n_pins = n_pins;
+    // __ids = new int[__n_pins];  // Creates a new array with the correct length
 };
 
 void Central_Control_Module::setup() //init
@@ -223,3 +228,41 @@ void Central_Control_Module::update()
         rider_controls[i].update(current_millis);
     };
 };
+Rider_Control_Factory Central_Control_Module::get_rider_control_OLD(electric_load id)
+{
+    /* Get a Rider_Control_Factory object stored in rider_control 
+    of Central_Control_Module.
+    If it doesn't exist, return a default Rider_Control_Factory
+    */
+    for (int i = 0; i < __n_pins; i++)
+    {
+        //    if ( (int)id == rider_controls[i].id)
+        if ((int)id == __ids[i])
+        {
+            return rider_controls[i];
+        }
+    }
+    return Rider_Control_Factory();
+}
+Rider_Control_Factory Central_Control_Module::get_rider_control(electric_load id)
+{
+    /* Get a Rider_Control_Factory object stored in rider_control 
+    of Central_Control_Module.
+    */
+    return rider_dict[id];
+}
+void Central_Control_Module::turn_ON(electric_load id)
+{
+    /* Turn an electric load ON. */
+    get_rider_control(id).activate();
+}
+void Central_Control_Module::turn_OFF(electric_load id)
+{
+    /* Turn an electric load ON. */
+    get_rider_control(id).deactivate();
+}
+void Central_Control_Module::toggle(electric_load id)
+{
+    /* Turn an electric load ON. */
+    get_rider_control(id).toggle();
+}
