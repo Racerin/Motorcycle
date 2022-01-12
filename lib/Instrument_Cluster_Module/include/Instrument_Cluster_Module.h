@@ -9,19 +9,37 @@
 
 #include <Arduino.h>
 
+#include <TM1638plus.h>
+
+
+namespace cluster{
+    enum config{simple};
+    enum state{main}; 
+}
+
 class Instrument_Cluster_Module
 {
 public:
-    // Instantiation
-    Instrument_Cluster_Module(int clk, int talk, int dio_in, int dio_out);
-    Instrument_Cluster_Module();
+    // Attributes
+    TM1638plus tm;
+    cluster::state current_state = cluster::state::main;
+    cluster::config current_config = cluster::config::simple;
 
     // Methods
     void setup();
     void update();
 
+    // Instantiation
+    Instrument_Cluster_Module(int clk, int strobe, int dio);
+    Instrument_Cluster_Module();
+
+    // Configuration
+    void SimpleControls();
+
   private:
     int clk;
+    int strobe;
+    int dio;
 };
 
 #endif
