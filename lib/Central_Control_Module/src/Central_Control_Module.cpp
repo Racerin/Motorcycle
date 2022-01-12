@@ -5,78 +5,16 @@
  */
 
 #include "Arduino.h"
-// #include <Bounce2.h>
-// #include "InputDebounce.h"
-#include "Central_Control_Module.h"
+
 #include <ArduinoSTL.h>
+#include <TM1638plus.h>
 
-class Button
-{
-    /* Returns the states of a pin as needed. */
-public:
-    int pin;
-    int time_now;
-    int time_press_threshold = 100;
-    int time_pressed_down;
-    int is_pressing;
-    int normal_value;
-    int dt_press_down;
+#include "Central_Control_Module.h"
 
-    Button(int pin, int normal_value, int time_press_threshold)
-    {
-        setup();
-    };
-
-    void setup()
-    {
-        // Set pin mode
-        pinMode(pin, INPUT);
-    };
-
-    void update()
-    {
-        /* Update some key attributes */
-        time_now = millis();
-        dt_press_down = time_now - time_pressed_down;
-    };
-
-    int pressed()
-    {
-        /* Checks to see if button was pressed. */
-        return digitalRead(pin) != normal_value;
-    };
-
-    int ON()
-    {
-        /* Check to see if button pressed based on hold down (debouncing) */
-        update();
-        if (pressed())
-        {
-            if (dt_press_down > time_press_threshold)
-            {
-                // button was pressed sufficiently
-                return 1;
-            }
-            else
-            {
-                // Check if it is 1st press
-                if (!is_pressing)
-                {
-                    // Time of 1st press
-                    time_pressed_down = time_now;
-                }
-                is_pressing = 1;
-            }
-        }
-        else
-        {
-            // updating values
-            is_pressing = 0;
-            // Just return false
-            return 0;
-        };
-    };
-};
+namespace cluster{
+    enum config{simple};
+    enum state{main}; 
+}
 
 class Rider_Control_Factory
 {
@@ -182,6 +120,54 @@ public:
         state = state_OFF;
     };
 };
+
+class Instrument_Cluster_Module
+{
+public:
+    // Attributes
+    TM1638plus tm;
+    cluster::state current_state = cluster::state::main;
+    cluster::config current_config = cluster::config::simple;
+
+    // Configuration
+    void SimpleControls()
+    {
+        uint8_t buttons = tm.readButtons();
+        switch (current_state)
+        {
+            case main:
+                switch(buttons)
+                {
+                    // Left indicator, button 1
+                    case 0b00000001: 
+
+                }
+                break;
+        };
+    };
+
+    // Methods
+    void setup()
+    {
+        TM1638plus tm(strobe, clk, dio, HIGH_FREQ);
+    }
+    void update();
+
+    // Instantiation
+    Instrument_Cluster_Module(int clk, int strobe, int dio)
+    {
+        // TM1638plus tm(strobe, clk, dio, HIGH_FREQ);
+    };
+    Instrument_Cluster_Module();
+
+  private:
+    bool HIGH_FREQ = false;
+    
+    int clk;
+    int strobe;
+    int dio;
+};
+
 
 Central_Control_Module::Central_Control_Module(
     electric_load ids[],

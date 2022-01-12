@@ -29,7 +29,4 @@ void Instrument_Cluster_Module::update()
 the current state of the cluster instrument.
 */
 {
-    switch(current_config){
-        case simple: SimpleControls(); break;
-    }
 };
