@@ -1,0 +1,271 @@
+/* 
+    All_In_One.cpp - Library for controlling a motorcycle using an Arduino.
+    Created by Darnell Baird, January 8th, 2021.
+    Released into the public domain.
+ */
+
+#include "Arduino.h"
+
+#include <TM1638plus.h>
+
+#include "All_In_One.h"
+
+#include <Electric_Load_Observer.h>
+
+namespace cluster
+{
+    enum config
+    {
+        simple
+    };
+    enum state
+    {
+        main
+    };
+}
+
+void Electric_Load::turn_ON()
+{
+    current_state = !default_state;
+    time_ON = millis();
+};
+void Electric_Load::turn_OFF()
+{
+    current_state = default_state;
+    time_OFF = millis();
+}
+void Electric_Load::toggle()
+{
+    current_state = !current_state;
+    time = millis();
+    if (!is_ON())
+    {
+        time_OFF = time;
+    }
+    else
+    {
+        time_ON = time;
+    }
+    time_toggled = time;
+}
+bool Electric_Load::is_ON()
+{
+    return current_state != default_state;
+}
+Electric_Load::Electric_Load(
+    const int _id,
+    const int _output_pin,
+    const int _default_state,
+    const int _control_type)
+{
+    // Assign attributes
+    this->id = _id;
+    this->output_pin = _output_pin;
+    this->default_state = _default_state;
+    this->control_type = _control_type;
+}
+void Electric_Load::update(int milliseconds)
+{
+    switch (control_type)
+    {
+    case states::control_type::blink:
+        if (!is_ON()) // OFF
+        {
+            digitalWrite(output_pin, default_state);
+        }
+        else
+        // Cycle ON then OFF.
+        {
+            if (milliseconds % time_blink_cycle < time_blink_cycle / 2)
+            { // ON
+                digitalWrite(output_pin, !default_state);
+            }
+            else
+            { // OFF
+                digitalWrite(output_pin, default_state);
+            };
+        }
+        break;
+    default:
+        if (!is_ON())
+        {
+            digitalWrite(output_pin, default_state);
+        } // OFF
+        else
+        {
+            digitalWrite(output_pin, !default_state);
+        } // ON
+    }
+};
+void Electric_Load::update()
+{
+    update(millis());
+};
+
+All_In_One::All_In_One(const Electric_Load _loads[], const int _n_loads)
+{
+    // Assign attributes
+    loads[_n_loads] = {};
+    for (int i = 0; i < _n_loads; i++)
+    {
+        loads[i] = _loads[i];
+    }
+    n_loads = _n_loads;
+};
+
+void All_In_One::setup()
+/* Call within 'setup' for Arduino. */
+{
+    // TM1638 Module
+    tm = TM1638plus(TM_CLOCK, TM_STROBE, TM_DIO);
+    tm.reset();
+};
+
+void All_In_One::update()
+/* Run update within 'update' of Arduino. */
+{
+    // Run update for each rider control
+    current_millis = millis();
+    for (int i = 0; i < n_loads; i++)
+    {
+        loads[i].update(current_millis);
+    };
+    // Update on TM1638 module
+    tm_update();
+};
+void All_In_One::tm_update()
+{
+    // Update buttons status
+    previous_buttons = current_buttons;
+    current_buttons = tm.readButtons();
+    // If any buttons pressed and previous buttons and current buttons match, it is held down
+    is_held_down = current_buttons && (current_buttons == previous_buttons);
+    just_pressed = current_buttons > previous_buttons;
+    just_released = current_buttons < previous_buttons;
+
+    // Respond according to state
+    switch(current_config)
+    {
+        case cluster::config::simple: config_simple_update(); break;
+    }
+}
+void All_In_One::config_simple_update()
+/* Carry-out actions based on buttons and combinations pressed. */
+{
+    if (just_pressed)
+    {
+        switch(current_buttons)
+        {
+            case 1<<7:  // Left indicator, left button
+                // If other indicator is ON already, turn them OFF and turn this ON.
+                if (get_load(states::load_id::right_indicator).is_ON())
+                {
+                    turn_ON(states::load_id::left_indicator);
+                }
+                else
+                // toggle left indicator
+                {
+                    toggle(states::load_id::left_indicator);
+                }
+                break;
+
+            case 1<<0: // Right indicator, right button
+                // If other indicator is ON already, turn them OFF and turn this ON.
+                if (get_load(states::load_id::left_indicator).is_ON())
+                {
+                    turn_ON(states::load_id::right_indicator);
+                }
+                else
+                // toggle right indicator
+                {
+                    toggle(states::load_id::right_indicator);
+                }
+                break;
+
+            case (1<<7) & (1<<0):   // Hazards (left and right indicators), left and right most buttons
+                Electric_Load left = get_load(states::load_id::left_indicator);
+                Electric_Load right = get_load(states::load_id::right_indicator);
+                if (left.is_ON() && right.is_ON())
+                // Hazards is already ON. Turn it OFF.
+                {
+                    left.turn_OFF();
+                    right.turn_OFF();
+                }
+                else
+                // An indicator might be ON already but turn ON hazards.
+                {
+                    left.turn_OFF();
+                    right.turn_OFF();
+                    // Turn ON Hazards
+                    left.turn_ON();
+                    right.turn_ON();
+                }
+
+            case 1<<3:  // Headlight
+                toggle(states::load_id::headlight);
+                break;
+            
+            case 1<<4:  // Lights
+                toggle(states::load_id::lights);
+                break;
+
+            case 1<<2:  // Turn ON Horn
+                // turn_ON(states::load_id::horn);
+                toggle(states::load_id::horn);
+                break;
+
+            case 1<<6:  // Turn ON ignition and attempt to start.
+                Electric_Load ignition = get_load(states::load_id::ignition);
+                ignition.toggle();
+                // If ignition turn ON, turn ON starter
+                if(ignition.is_ON())
+                {
+                    turn_ON(states::load_id::starter);
+                }
+        }
+    }
+    if(just_released)
+    {
+        // Turn OFF Horn
+        if( !((1<<2) & current_buttons) )   
+        // Horn button not engaged.
+        {
+            turn_OFF(states::load_id::horn);
+        }
+
+        // Turn OFF starter
+        if( !((1<<6) & current_buttons) )
+        {
+            turn_OFF(states::load_id::starter);
+        }
+    }
+}
+Electric_Load All_In_One::get_load(int id)
+{
+    /* Get Electric_Load object stored in All_In_One.
+    If it doesn't exist, return a default Electric_Load
+    */
+    for (int i = 0; i < n_loads; i++)
+    {
+        if (id == loads[i].id)
+        {
+            return loads[i];
+        }
+    }
+    return Electric_Load();
+}
+void All_In_One::turn_ON(int id)
+{
+    /* Turn an electric load ON. */
+    get_load(id).turn_ON();
+}
+void All_In_One::turn_OFF(int id)
+{
+    /* Turn an electric load ON. */
+    get_load(id).turn_OFF();
+}
+void All_In_One::toggle(int id)
+{
+    /* Turn an electric load ON. */
+    get_load(id).toggle();
+}
