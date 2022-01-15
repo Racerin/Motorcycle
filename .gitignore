@@ -4,3 +4,11 @@
 .vscode/launch.json
 .vscode/ipch
 
+# Personal Files
+*/HelloWorld
+
+# Abandoned
+*Central_Control_Module*
+*/Electric_Load*
+*/Field_Coil*
+*/Instrument_Cluster_Module*
