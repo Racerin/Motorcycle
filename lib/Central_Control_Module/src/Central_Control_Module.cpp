@@ -6,17 +6,20 @@
 
 #include "Arduino.h"
 
-#include <ArduinoSTL.h>
 #include <TM1638plus.h>
 
 #include "Central_Control_Module.h"
+
+#include <Electric_Load_Observer.h>
 
 namespace cluster{
     enum config{simple};
     enum state{main}; 
 }
 
-class Rider_Control_Factory
+class Electric_Loads : Money::IObserver{};
+
+class Electric_Load
 {
 public:
     int input_pin;
@@ -31,14 +34,14 @@ public:
     int time_last_pressed;
     int time_held_down;
 
-    Rider_Control_Factory(int input_pin, int output_pin, int state_OFF, char type_flag)
+    Electric_Load(int input_pin, int output_pin, int state_OFF, char type_flag)
     {
         // Set pins modes
         pinMode(input_pin, INPUT);
         pinMode(output_pin, OUTPUT);
     }
 
-    Rider_Control_Factory() {}
+    Electric_Load() {}
 
     void activate_func()
     {
@@ -128,21 +131,32 @@ public:
     TM1638plus tm;
     cluster::state current_state = cluster::state::main;
     cluster::config current_config = cluster::config::simple;
+    // virtual void toggle(int id) = 0;
+    // virtual void activate(int id) = 0;
+    // virtual void deactivate(int id) = 0;
+    void toggle(int id);
+    void activate(int id);
+    void deactivate(int id);
 
-    // Configuration
-    void SimpleControls()
+    // Instrument Controls Layout
+    void simple_main_layout()
     {
-        uint8_t buttons = tm.readButtons();
+        switch(buttons)
+        {
+            // Left indicator, button 1
+            case 0b00000001: toggle(load_id::left_indicator); break;
+            // TODO: Be continued
+        }
+    }
+
+    // Configurations
+    void SimpleControlsConfig()
+    /* Returns a simple preset options of rider controls. 
+    */
+    {
         switch (current_state)
         {
-            case main:
-                switch(buttons)
-                {
-                    // Left indicator, button 1
-                    case 0b00000001: 
-
-                }
-                break;
+            case cluster::state::main: simple_main_layout(); break;
         };
     };
 
@@ -151,13 +165,22 @@ public:
     {
         TM1638plus tm(strobe, clk, dio, HIGH_FREQ);
     }
-    void update();
+    void update()
+    /* Select Preset depending on the configuration selected and
+    the current state of the cluster instrument.
+    */
+    {
+        // Get inputs of cluster
+        buttons = tm.readButtons();
+
+        switch(current_config){
+            case cluster::config::simple: SimpleControlsConfig(); break;
+        }
+    };
 
     // Instantiation
-    Instrument_Cluster_Module(int clk, int strobe, int dio)
-    {
-        // TM1638plus tm(strobe, clk, dio, HIGH_FREQ);
-    };
+    Instrument_Cluster_Module(int clk, int strobe, int dio, cluster::config current_config, cluster::state current_state);
+    Instrument_Cluster_Module(int clk, int strobe, int dio);
     Instrument_Cluster_Module();
 
   private:
@@ -166,11 +189,13 @@ public:
     int clk;
     int strobe;
     int dio;
+
+    uint8_t buttons;
 };
 
 
 Central_Control_Module::Central_Control_Module(
-    electric_load ids[],
+    load_id ids[],
     int input_pins[],
     int output_pins[],
     int default_values[],
@@ -178,12 +203,12 @@ Central_Control_Module::Central_Control_Module(
     int n_pins)
 {
     // Create arrays of size
-    Rider_Control_Factory rider_controls[n_pins];
+    Electric_Load rider_controls[n_pins];
 
     // Create Rider_Control object and keep it within
     for (int i = 0; i < n_pins; i++)
     {
-        Rider_Control_Factory rider_control = Rider_Control_Factory(
+        Electric_Load rider_control = Electric_Load(
             input_pins[i],
             output_pins[i],
             default_values[i],
@@ -195,13 +220,15 @@ Central_Control_Module::Central_Control_Module(
     }
 
     // Assign attributes
-    __n_pins = n_pins;
-    // __ids = new int[__n_pins];  // Creates a new array with the correct length
+    n_pins = n_pins;
+    // ids = new int[n_pins];  // Creates a new array with the correct length
 };
 
 void Central_Control_Module::setup() //init
+    /* Run setup within 'setup' for Arduino. */
     {
-        /* Run setup within 'setup' for Arduino. */
+        // Assign new methods of this Instrument_Cluster_Module
+        icm.toggle = this->toggle;
     };
 
 void Central_Control_Module::update()
@@ -209,45 +236,45 @@ void Central_Control_Module::update()
     /* Run update within 'update' of Arduino. */
     // Run update for each rider control
     current_millis = millis();
-    for (int i = 0; i < __n_pins; i++)
+    for (int i = 0; i < n_pins; i++)
     {
         rider_controls[i].update(current_millis);
     };
 };
-Rider_Control_Factory Central_Control_Module::get_rider_control_OLD(electric_load id)
+Electric_Load Central_Control_Module::get_rider_control_OLD(load_id id)
 {
-    /* Get a Rider_Control_Factory object stored in rider_control 
+    /* Get a Electric_Load object stored in rider_control 
     of Central_Control_Module.
-    If it doesn't exist, return a default Rider_Control_Factory
+    If it doesn't exist, return a default Electric_Load
     */
-    for (int i = 0; i < __n_pins; i++)
+    for (int i = 0; i < n_pins; i++)
     {
         //    if ( (int)id == rider_controls[i].id)
-        if ((int)id == __ids[i])
+        if ((int)id == ids[i])
         {
             return rider_controls[i];
         }
     }
-    return Rider_Control_Factory();
+    return Electric_Load();
 }
-Rider_Control_Factory Central_Control_Module::get_rider_control(electric_load id)
+Electric_Load Central_Control_Module::get_rider_control(load_id id)
 {
-    /* Get a Rider_Control_Factory object stored in rider_control 
+    /* Get a Electric_Load object stored in rider_control 
     of Central_Control_Module.
     */
     return rider_dict[id];
 }
-void Central_Control_Module::turn_ON(electric_load id)
+void Central_Control_Module::turn_ON(load_id id)
 {
     /* Turn an electric load ON. */
     get_rider_control(id).activate();
 }
-void Central_Control_Module::turn_OFF(electric_load id)
+void Central_Control_Module::turn_OFF(load_id id)
 {
     /* Turn an electric load ON. */
     get_rider_control(id).deactivate();
 }
-void Central_Control_Module::toggle(electric_load id)
+void Central_Control_Module::toggle(load_id id)
 {
     /* Turn an electric load ON. */
     get_rider_control(id).toggle();

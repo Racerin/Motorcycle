@@ -11,54 +11,56 @@
 // #include <ArduinoSTL.h>
 #include <map>
 
+// enum
+enum load_id
+{
+    none,
+    left_indicator,
+    right_indicator,
+    headlight,
+    horn,
+    lights,
+    ignition,
+    brake,
+    starter
+};
+
+enum load_type{
+    button,
+    cycle
+};
+
 class Central_Control_Module
 {
-    public:
-        // enum
-        enum class electric_load{
-            none=0,
-            left_indicator, 
-            right_indicator, 
-            headlight, 
-            horn, 
-            lights, 
-            ignition,
-            brake,
-            starter
-            };
+public:
+    // Instantiation
+    Central_Control_Module(
+        int ids[],
+        int output_pins[],
+        int default_values[],
+        int rider_control_types[],
+        int n_pins);
 
-        // Instantiation
-        Central_Control_Module(
-            // int ids[],
-            electric_load ids[],
-            int input_pins[],
-            int output_pins[],
-            int default_values[],
-            char rider_control_types[],
-            int n_pins
-            );
-        
-        // Methods
-        void setup();
-        void update();
-        void turn_OFF(electric_load load_id);
-        void turn_ON(electric_load load_id);
-        void toggle(electric_load load_id);
+    // Methods
+    void setup();
+    void update();
+    void turn_OFF(int load_id);
+    void turn_ON(int load_id);
+    void toggle(int load_id);
 
-    private:
-        // Attributes
-        int __n_pins;
-        int current_millis;
-        int* __ids; // Will be populated later
-        std::map<electric_load, Rider_Control_Factory> rider_dict;
-        // std::vector<int> __ids;
+private:
+    // Attributes
+    int n_pins;
+    int current_millis;
+    int ids;
 
-        Rider_Control_Factory rider_controls[];
+    Instrument_Cluster_Module icm;
+    Electric_Loads elecLoads;
 
-        // Methods
-        Rider_Control_Factory get_rider_control_OLD(electric_load id);
-        Rider_Control_Factory get_rider_control(electric_load id);
+    Electric_Load rider_controls[];
 
+    // Methods
+    Electric_Load get_rider_control(load_id id);
 };
 
 #endif
