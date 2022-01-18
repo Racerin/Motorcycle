@@ -14,9 +14,8 @@
 #define TIME_BLINK_CYCLE_DEFAULT 1000
 
 namespace states{
-    enum load_type{button, blink};
     enum load_id{
-        none,
+        no_id,
         left_indicator,
         right_indicator,
         headlight,
@@ -26,17 +25,25 @@ namespace states{
         starter,
         ignition
     };
-    enum control_type{
-        none,
-        button,
-        blink
+    enum control_type{no_control, button, blink};
+}
+
+namespace cluster
+{
+    enum config
+    {
+        simple
     };
-};
+    enum view
+    {
+        main
+    };
+}
 
 class Electric_Load
 {
     public:
-        int id = states::load_id::none;
+        int id = states::load_id::no_id;
         int output_pin;
         int default_state = LOW;
         int control_type = states::control_type::blink;
@@ -64,10 +71,11 @@ class Electric_Load
 class All_In_One
 {
 public:
-    int TM_CLOCK = 4;
-    int TM_STROBE = 6;
-    int TM_DIO = 7;
-    int current_state = cluster::state::main;
+    uint8_t TM_STROBE = 4;
+    uint8_t TM_CLOCK = 6;
+    uint8_t TM_DIO = 7;
+    uint8_t TM_HIGH_FREQ = false;
+    int current_state = cluster::view::main;
     int current_config = cluster::config::simple;
     // Constructor
     All_In_One(const Electric_Load _loads[], const int _n_loads);
@@ -87,14 +95,17 @@ private:
     Electric_Load* loads;
     int n_loads;
 
-    TM1638plus tm;
+    // TM1638plus tm;
     uint8_t current_buttons;
     uint8_t previous_buttons;
     bool is_held_down;
     bool just_pressed;
     bool just_released;
+    void displayText(const char text[]);
+    bool to_displayText = true;
     void tm_update();
     void config_simple_update();
+    void simple_main_view_update();
 
 };
 
