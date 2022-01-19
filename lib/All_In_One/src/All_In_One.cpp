@@ -39,7 +39,7 @@ void Electric_Load::toggle()
 }
 bool Electric_Load::is_ON()
 {
-    return current_state != default_state;
+    return current_state == !default_state;
 }
 Electric_Load::Electric_Load(
     const int _id,
@@ -48,10 +48,13 @@ Electric_Load::Electric_Load(
     const int _control_type)
 {
     // Assign attributes
-    id = _id;
-    output_pin = _output_pin;
-    default_state = _default_state;
-    control_type = _control_type;
+    this->id = _id;
+    this->output_pin = _output_pin;
+    this->default_state = _default_state;
+    this->control_type = _control_type;
+
+    // Set pin mode
+    pinMode(output_pin, OUTPUT);
 }
 void Electric_Load::update(int milliseconds)
 {
@@ -63,7 +66,7 @@ void Electric_Load::update(int milliseconds)
             digitalWrite(output_pin, default_state);
         }
         else
-        // Cycle ON then OFF.
+        // Cycle ON and OFF.
         {
             if (milliseconds % time_blink_cycle < time_blink_cycle / 2)
             { // ON
@@ -108,6 +111,8 @@ void All_In_One::setup()
     // TM1638 Module
     // tm = TM1638plus(TM_STROBE, TM_CLOCK, TM_DIO, TM_HIGH_FREQ);
     tm.displayBegin();
+    // tm.displayText("Baird");
+    displayText("Baird");
 };
 
 void All_In_One::update()
@@ -131,7 +136,19 @@ void All_In_One::tm_update()
     is_held_down = current_buttons && (current_buttons == previous_buttons);
     just_pressed = current_buttons > previous_buttons;
     just_released = current_buttons < previous_buttons;
+    // Debugging with some serial prints
+    if (false){
+        // Serial.println("Meow:");
+        uint8_t checks = 0;
+        // checks = current_buttons;
+        checks = checks | (is_held_down<<0);
+        checks = checks | (just_pressed<<1);
+        checks = checks | (just_released<<2);
+        // Serial.printf()
+        Serial.println(checks, BIN);
+    }
 
+    Serial.println("We Reached");
     // Respond according to config
     switch(current_config)
     {
@@ -140,9 +157,10 @@ void All_In_One::tm_update()
 }
 void All_In_One::displayText(const char text[])
 {
+    tm.reset();
     if(to_displayText)
     {
-        // tm.displayText(text);
+        tm.displayText(text);
     }
 }
 void All_In_One::config_simple_update()
@@ -155,6 +173,17 @@ void All_In_One::config_simple_update()
 }
 void All_In_One::simple_main_view_update()
 {
+    // get_load(states::load_id::left_indicator).turn_ON();
+    // get_load(states::load_id::right_indicator).turn_ON();
+    digitalWrite(get_load(states::load_id::left_indicator).output_pin, LOW);
+    delay(3000);
+    digitalWrite(get_load(states::load_id::left_indicator).output_pin, HIGH);
+    // get_load(states::load_id::left_indicator).turn_OFF();
+    // get_load(states::load_id::right_indicator).turn_OFF();
+    delay(3000);
+}
+void All_In_One::simple_main_view_update1()
+{
     if (just_pressed)
     {
         switch(current_buttons)
@@ -164,11 +193,13 @@ void All_In_One::simple_main_view_update()
                 if (get_load(states::load_id::right_indicator).is_ON())
                 {
                     turn_ON(states::load_id::left_indicator);
+                    displayText("Left ON.");
                 }
                 else
                 // toggle left indicator
                 {
                     toggle(states::load_id::left_indicator);
+                    displayText("Left Tg.");
                 }
                 break;
 
@@ -177,11 +208,13 @@ void All_In_One::simple_main_view_update()
                 if (get_load(states::load_id::left_indicator).is_ON())
                 {
                     turn_ON(states::load_id::right_indicator);
+                    displayText("Rite ON.");
                 }
                 else
                 // toggle right indicator
                 {
                     toggle(states::load_id::right_indicator);
+                    displayText("Rite Tg.");
                 }
                 break;
 
@@ -194,6 +227,7 @@ void All_In_One::simple_main_view_update()
                     {
                         left.turn_OFF();
                         right.turn_OFF();
+                        displayText("Haz OFF.");
                     }
                     else
                     // An indicator might be ON already but turn ON hazards.
@@ -203,20 +237,24 @@ void All_In_One::simple_main_view_update()
                         // Turn ON Hazards
                         left.turn_ON();
                         right.turn_ON();
+                        displayText("Haz ON.");
                     }
                 }
 
             case 1<<4:  // Headlight
                 toggle(states::load_id::headlight);
+                displayText("Head Tg.");
                 break;
             
             case 1<<5:  // Lights
                 toggle(states::load_id::lights);
+                displayText("Lite Tg.");
                 break;
 
             case 1<<6:  // Turn ON Horn
                 // toggle(states::load_id::horn);
                 turn_ON(states::load_id::horn);
+                displayText("Horn ON.");
                 break;
 
             case 1<<3:  // Turn ON ignition and attempt to start.
@@ -237,10 +275,11 @@ void All_In_One::simple_main_view_update()
     if(just_released)
     {
         // Turn OFF Horn
-        if( !((1<<6) & current_buttons) )   
+        if( !((1<<6) & current_buttons) & get_load(states::load_id::horn).is_ON())
         // Horn button not engaged.
         {
             turn_OFF(states::load_id::horn);
+            displayText("Horn OFF.");
         }
 
         // Turn OFF starter

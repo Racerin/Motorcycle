@@ -46,7 +46,7 @@ class Electric_Load
         int id = states::load_id::no_id;
         int output_pin;
         int default_state = LOW;
-        int control_type = states::control_type::blink;
+        int control_type = states::control_type::button;
         
         void turn_ON();
         void turn_OFF();
@@ -106,6 +106,7 @@ private:
     void tm_update();
     void config_simple_update();
     void simple_main_view_update();
+    void simple_main_view_update1();
 
 };
 
